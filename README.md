@@ -44,7 +44,7 @@
 
 -   회원가입
 
-    1. `createUserWithEmailAndPassword` 함수를 이용하여 이전에 사용해둔 auth와 email, password를 매개변수로 하는 함수를 작성
+    1. `createUserWithEmailAndPassword` 함수를 이용하여 이전에 만들어둔 auth와 email, password를 매개변수로 하는 함수를 작성
 
         ```javascript
         import { getAuth } from "firebase/auth";
@@ -67,6 +67,53 @@
         ```
 
 -   로그인
+
+    1. `signInWithEmailAndPassword` 함수를 이용하여 이전에 만들어둔 auth와 입력받은 email, password를 매개변수로 활용하여 아래와 같이 작성
+
+        ```javascript
+        export async function handleLogin(email: string, password: string) {
+            await signInWithEmailAndPassword(auth, email, password);
+        }
+        ```
+
+    2. 아래와 같이 로그인 버튼이 눌렸을떄 위에 선언한 `handleLogin`를 사용하여 `try-catch`를 활용하여 error가 발생했을때 경우도 대응
+        ```javascript
+        async function handleSubmit(email: string, password: string) {
+            try {
+                await handleLogin(email, password);
+                alert("로그인 완료");
+            } catch (error: any) {
+                alert(error.code + error.message);
+            }
+        }
+        ```
+
+-   회원가입 시 이메일 인증 기능을 사용하고 싶을때
+
+    1. 아래와 같이 Firebase에서 제공해주는 `sendEmailVerification` 함수를 회원 가입 시 같이 사용하여 email을 발송
+
+        ```javascript
+        export async function handleRegister(email: string, password: string) {
+            await createUserWithEmailAndPassword(auth, email, password);
+            await sendEmailVerification(auth.currentUser!);
+        }
+        ```
+
+    2. 해당 인증을 진행하지 않으면 로그인 시 `signInWithEmailAndPassword`함수가 반환해주는 credential값에 emailVerified가 false로 반환이 되며 이를 이용하여 아래 코드와 같이 로그인 시 판단하여 `throw Error`로 대응해주면됨
+
+        ```javascript
+        export async function handleLogin(email: string, password: string) {
+            const credential = await signInWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
+            if (!credential.user.emailVerified) {
+                throw Error("이메일 인증 후 로그인해주세요.");
+            }
+        }
+        ```
 
 ### Naver
 

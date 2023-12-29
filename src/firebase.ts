@@ -1,5 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import {
+    createUserWithEmailAndPassword,
+    getAuth,
+    sendEmailVerification,
+    signInWithEmailAndPassword,
+} from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY as string,
@@ -16,4 +21,13 @@ const auth = getAuth(app);
 
 export async function handleRegister(email: string, password: string) {
     await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(auth.currentUser!);
+}
+
+export async function handleLogin(email: string, password: string) {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+
+    if (!credential.user.emailVerified) {
+        throw Error("이메일 인증 후 로그인해주세요.");
+    }
 }
