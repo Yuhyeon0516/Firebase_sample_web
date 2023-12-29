@@ -1,46 +1,77 @@
-# Getting Started with Create React App
+# Firebase Web 초기 셋팅
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+1. Firebase Console에서 프로젝트 만들기(https://console.firebase.google.com/?hl=ko)
+2. 앱 추가하기에서 Web 추가
+3. 앱 이름 작성 후 Firebase SDK 추가에 나타나는 apiKey, authDomain 등 유출되면 위험한 항목들을 `.env` 파일에 아래와 같이 작성해준다.
+    ```
+    REACT_APP_FIREBASE_API_KEY=
+    REACT_APP_FIREBASE_AUTH_DOMAIN=
+    REACT_APP_FIREBASE_PROJECT_ID=
+    REACT_APP_FIREBASE_STORAGE_BUCKET=
+    REACT_APP_FIREBASE_MESSAGING_SENDER_ID=
+    REACT_APP_FIREBASE_APP_ID=
+    ```
+4. `npm install firebase`
+5. `firebase.ts`파일을 `src`폴더에 생성 후 아래와 같이 initial과정을 진행한다.
 
-## Available Scripts
+    ```javascript
+    import { initializeApp } from "firebase/app";
 
-In the project directory, you can run:
+    const firebaseConfig = {
+        apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+        authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.REACT_APP_FIREBASE_APP_ID,
+    };
 
-### `npm start`
+    const app = initializeApp(firebaseConfig);
+    ```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+# Firebase Auth(회원가입, 로그인)
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+1. Firebase Console에서 빌드 -> Authentication에서 사용할 로그인 제공업체를 활성화
+2. `getAuth` 함수를 이용하여 auth의 정보를 가져옴(매개변수로 이전에 initial해둔 firebase app을 활용)
 
-### `npm test`
+    ```javascript
+    import { getAuth } from "firebase/auth";
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+    const auth = getAuth(app);
+    ```
 
-### `npm run build`
+### Email & Password
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+-   회원가입
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+    1. `createUserWithEmailAndPassword` 함수를 이용하여 이전에 사용해둔 auth와 email, password를 매개변수로 하는 함수를 작성
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+        ```javascript
+        import { getAuth } from "firebase/auth";
 
-### `npm run eject`
+        export async function handleRegister(email: string, password: string) {
+            await createUserWithEmailAndPassword(auth, email, password);
+        }
+        ```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+    2. 아래와 같이 회원가입 버튼이 눌렸을떄 위에 선언한 `handleRegister`를 사용하여 `try-catch`를 활용하여 error가 발생했을때 경우도 대응
+        ```javascript
+        async function handleSubmit(email: string, password: string) {
+            try {
+                await handleRegister(email, password);
+                alert("회원가입 완료");
+            } catch (error: any) {
+                alert(error.code + error.message);
+            }
+        }
+        ```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+-   로그인
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Naver
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### Kakao
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+# Firebase Storage(게시판)
