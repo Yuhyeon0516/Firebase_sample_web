@@ -3,6 +3,7 @@ import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import Home from "./Home";
 import Join from "./auth/email/Join";
 import Login from "./auth/email/Login";
+import Naver from "./auth/naver/Naver";
 
 const router = createBrowserRouter([
     {
@@ -19,6 +20,10 @@ const router = createBrowserRouter([
             {
                 path: "login",
                 element: <Login />,
+            },
+            {
+                path: "naver",
+                element: <Naver />,
             },
         ],
     },
