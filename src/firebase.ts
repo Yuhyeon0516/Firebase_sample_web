@@ -3,6 +3,7 @@ import {
     createUserWithEmailAndPassword,
     getAuth,
     sendEmailVerification,
+    signInWithCustomToken,
     signInWithEmailAndPassword,
 } from "firebase/auth";
 import axios from "axios";
@@ -53,45 +54,16 @@ export function handleNaverLoginRedirect() {
     window.location.href = naver_auth_url;
 }
 
-async function getNaverProfile(accessToken: string) {
-    const get_naver_profile_url = `/profile/v1/nid/me`;
-    const headers = {
-        Authorization: "Bearer " + accessToken,
-    };
-
-    const result = await axios.get(get_naver_profile_url, { headers });
-
-    return result;
-}
-
-export async function handleGetNaverLoginToken(code: string) {
-    const state = getUniqStateValue();
-    const naver_client_id = process.env.REACT_APP_NAVER_CLIENT_ID;
-    const naver_client_secret = process.env.REACT_APP_NAVER_CLIENT_SECRET;
-    const naver_token_url = `/token/oauth2.0/token?grant_type=authorization_code&client_id=${naver_client_id}&client_secret=${naver_client_secret}&code=${code}&state=${state}`;
-
-    const result = await axios.get(naver_token_url);
-
-    return result;
-}
-
-interface IProfile {
-    data: {
-        response: {
-            email: string;
-            id: string;
-            mobile: string;
-            name: string;
-        };
-    };
-}
-
 export async function handleNaverLogin(code: string) {
     try {
-        const token: any = await handleGetNaverLoginToken(code);
-        const profile: IProfile = await getNaverProfile(
-            token.data.access_token
-        );
+        const res = await axios.post("/api/auth/naver", {
+            code,
+        });
+        const firebaseToken = res.data.firebaseToken;
+
+        const result = await signInWithCustomToken(auth, firebaseToken);
+
+        alert(`${result.user.displayName}님 안녕하세요.`);
     } catch (error: any) {
         alert(error.message);
     }
