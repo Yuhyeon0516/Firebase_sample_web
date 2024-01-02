@@ -5,6 +5,7 @@ import * as cors from "cors";
 import axios from "axios";
 import { config } from "dotenv";
 import { IKakaoProfile, INaverProfile } from "./types";
+import { defineBoolean } from "firebase-functions/params";
 
 config();
 
@@ -21,6 +22,19 @@ function getUniqStateValue() {
         }
     );
     return stat_str;
+}
+
+async function createNewUserCollection(
+    db: admin.firestore.Firestore,
+    email: string
+) {
+    try {
+        await db.collection("users").doc(email).set({
+            isAdmin: false,
+        });
+    } catch (error: any) {
+        throw Error(error);
+    }
 }
 
 async function getNaverToken(code: string) {
@@ -66,6 +80,7 @@ function getAdminApp() {
 async function updateOrCreateUserNaver(user: INaverProfile) {
     const app = getAdminApp();
     const auth = admin.auth(app);
+    const db = admin.firestore(app);
 
     const naverAccount = user.response;
     const properties = {
@@ -81,6 +96,7 @@ async function updateOrCreateUserNaver(user: INaverProfile) {
     } catch (error: any) {
         if (error.code === "auth/user-not-found") {
             try {
+                await createNewUserCollection(db, properties.email);
                 return await auth.createUser(properties);
             } catch (error: any) {
                 if (error.code === "auth/email-already-exists") {
@@ -146,6 +162,7 @@ async function getKakaoUser(token: string) {
 async function updateOrCreateUserKakao(user: IKakaoProfile) {
     const app = getAdminApp();
     const auth = admin.auth(app);
+    const db = admin.firestore(app);
 
     const properties = {
         uid: `kakao:${user.id}`,
@@ -160,6 +177,7 @@ async function updateOrCreateUserKakao(user: IKakaoProfile) {
     } catch (error: any) {
         if (error.code === "auth/user-not-found") {
             try {
+                await createNewUserCollection(db, properties.email);
                 return await auth.createUser(properties);
             } catch (error: any) {
                 if (error.code === "auth/email-already-exists") {

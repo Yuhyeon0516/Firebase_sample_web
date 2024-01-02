@@ -725,6 +725,72 @@
     }
     ```
 
----
+# Firebase Storage(게시판 + 관리자 기능)
 
-# Firebase Storage(게시판)
+-   회원가입 시 admin 권한을 false로 부여해주는 기능을 구현
+-   firestore에 collection`users`에 doc은 email로 생성하여 관리
+-   `createNewUserCollection`함수를 firebase functions에 새로 생성
+    ```javascript
+    async function createNewUserCollection(
+        db: admin.firestore.Firestore,
+        email: string
+    ) {
+        try {
+            await db.collection("users").doc(email).set({
+                isAdmin: false,
+            });
+        } catch (error: any) {
+            throw Error(error);
+        }
+    }
+    ```
+-   `updateOrCreateUserNaver`와 `updateOrCreateUserKakao`함수에 user를 새로 생성해주는 조건에서 위에 만든 `createNewUserCollection`함수를 사용
+
+    ```javascript
+    async function updateOrCreateUserNaver(user: INaverProfile) {
+        ...
+        const db = admin.firestore(app);
+        ...
+
+        try {
+            return await auth.updateUser(properties.uid, properties);
+        } catch (error: any) {
+            if (error.code === "auth/user-not-found") {
+                try {
+                    await createNewUserCollection(db, properties.email); // 새로 가입하는 조건이 users doc도 하나 새로 생성
+                    return await auth.createUser(properties);
+                } catch (error: any) {
+                    if (error.code === "auth/email-already-exists") {
+                        return await auth.getUserByEmail(properties.email);
+                    }
+                    throw Error(error);
+                }
+            }
+            throw Error(error);
+        }
+    }
+
+    async function updateOrCreateUserKakao(user: IKakaoProfile) {
+        ...
+        const db = admin.firestore(app);
+        ...
+
+        try {
+            return await auth.updateUser(properties.uid, properties);
+        } catch (error: any) {
+            if (error.code === "auth/user-not-found") {
+                try {
+                    await createNewUserCollection(db, properties.email); // 새로 가입하는 조건이 users doc도 하나 새로 생성
+                    return await auth.createUser(properties);
+                } catch (error: any) {
+                    if (error.code === "auth/email-already-exists") {
+                        return await auth.getUserByEmail(properties.email);
+                    }
+                    throw Error(error);
+                }
+            }
+            throw Error(error);
+        }
+    ```
+
+-   추가로 로그인이 성공하면 `/post`로 이동하는 기능도 구현
