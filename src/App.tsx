@@ -5,6 +5,7 @@ import Join from "./auth/email/Join";
 import Login from "./auth/email/Login";
 import Naver from "./auth/naver/Naver";
 import Kakao from "./auth/kakao/Kakao";
+import Post from "./post/Post";
 
 const router = createBrowserRouter([
     {
@@ -29,6 +30,15 @@ const router = createBrowserRouter([
             {
                 path: "kakao",
                 element: <Kakao />,
+            },
+        ],
+    },
+    {
+        path: "/post",
+        children: [
+            {
+                path: "",
+                element: <Post />,
             },
         ],
     },
