@@ -561,6 +561,128 @@
 
 ### Kakao
 
+-   기본적인 구조는 Naver랑 대부분 유사함
+
+1. Kakao 개발자 센터에서 앱 추가(https://developers.kakao.com/)
+2. 앱 추가 후 `.env`에 발급된 하기 키값 입력
+    ```
+    REACT_APP_KAKAO_RESTAPI_KEY=
+    REACT_APP_KAKAO_REDIRECT_URI=
+    ```
+3. Naver와 동일하게 Kakao 로그인 버튼이 눌렸을때 계정 인증 Page로 url redirect 시켜줌
+
+    ```javascript
+    export function handleKakaoLoginRedirect() {
+        const redirect_uri = process.env.REACT_APP_KAKAO_REDIRECT_URI;
+        const kakao_client_id = process.env.REACT_APP_KAKAO_RESTAPI_KEY;
+        const kakao_auth_url = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${kakao_client_id}&redirect_uri=${redirect_uri}`;
+
+        window.location.href = kakao_auth_url;
+    }
+    ```
+
+4. 계정 인증 후 redirect해준 url에서 인가 code 값만 `useSearchParams`함수를 이용해 가져온다
+
+    ```javascript
+    const searchParams = useSearchParams();
+    const code = searchParams[0].get("code");
+    ```
+
+5. 가져온 인가 code를 firebase functions로 HTTP Post 요청을 보냄(구조는 Naver와 비슷함)
+
+    ```javascript
+    export async function handleKakaoLogin(code: string) {
+        try {
+            const res = await axios.post("/api/auth/kakao", {
+                code,
+            });
+            const firebaseToken = res.data.firebaseToken;
+            const result = await signInWithCustomToken(auth, firebaseToken);
+
+            alert(`${result.user.displayName}님 안녕하세요.`);
+        } catch (error: any) {
+            alert(error.message);
+        }
+    }
+    ```
+
+6. 인가 code와 함께 Post요청이 firebase functions로 도착하면 해당 code를 이용하여 Naver와 동일하게 access token을 가져오고 해당 token을 이용하여 계정 생성 및 수정 후 firebaseToken으로 변환하여 response를 보내준다.
+
+    ```javascript
+    async function getKakaoToken(code: string) {
+        const kakao_client_id = process.env.KAKAO_RESTAPI_KEY;
+        const kakao_redirect_uri = process.env.KAKAO_REDIRECT_URI;
+        const kakao_client_secret = process.env.KAKAO_CLIENT_SECRET;
+        const kakao_token_url = `https://kauth.kakao.com/oauth/token?grant_type=authorization_code&client_id=${kakao_client_id}&redirect_uri=${kakao_redirect_uri}&code=${code}&client_secret=${kakao_client_secret}`;
+
+        try {
+            const res = await axios.post(kakao_token_url);
+
+            return res.data;
+        } catch (error: any) {
+            throw Error(error);
+        }
+    }
+
+    async function getKakaoUser(token: string) {
+        const headers = {
+            Authorization: `Bearer ${token}`,
+        };
+        const res = await axios.get("https://kapi.kakao.com/v2/user/me", {
+            headers,
+        });
+
+        return res.data;
+    }
+
+    async function updateOrCreateUserKakao(user: IKakaoProfile) {
+        const app = getAdminApp();
+        const auth = admin.auth(app);
+
+        const properties = {
+            uid: `kakao:${user.id}`,
+            provider: "KAKAO",
+            displayName: user.kakao_account.profile.nickname ?? "",
+            email: user.kakao_account.email,
+            emailVerified: true,
+        };
+
+        try {
+            return await auth.updateUser(properties.uid, properties);
+        } catch (error: any) {
+            if (error.code === "auth/user-not-found") {
+                return await auth.createUser(properties);
+            }
+            throw Error(error);
+        }
+    }
+
+    app.post("/kakao", async (req, res) => {
+        const { code } = req.body;
+
+        if (!code) {
+            return res.status(400).json({
+                code: 400,
+                message: "Code is a required parameter",
+            });
+        }
+
+        const response = await getKakaoToken(code);
+        const token = response.access_token;
+
+        const user = await getKakaoUser(token);
+
+        const authUser = await updateOrCreateUserKakao(user);
+        const firebaseToken = await admin
+            .auth()
+            .createCustomToken(authUser.uid, { provider: "KAKAO" });
+
+        return res.status(200).json({
+            firebaseToken,
+        });
+    });
+    ```
+
 ---
 
 # Firebase Storage(게시판)

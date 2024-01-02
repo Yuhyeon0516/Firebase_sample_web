@@ -4,7 +4,7 @@ import * as express from "express";
 import * as cors from "cors";
 import axios from "axios";
 import { config } from "dotenv";
-import { INaverProfile } from "./types";
+import { IKakaoProfile, INaverProfile } from "./types";
 
 config();
 
@@ -63,7 +63,7 @@ function getAdminApp() {
     return app;
 }
 
-async function updateOrCreateUser(user: INaverProfile) {
+async function updateOrCreateUserNaver(user: INaverProfile) {
     const app = getAdminApp();
     const auth = admin.auth(app);
 
@@ -100,10 +100,83 @@ app.post("/naver", async (req, res) => {
     const token = response.access_token;
     const user = await getNaverUser(token);
 
-    const authUser = await updateOrCreateUser(user);
+    const authUser = await updateOrCreateUserNaver(user);
     const firebaseToken = await admin
         .auth()
         .createCustomToken(authUser.uid, { provider: "NAVER" });
+
+    return res.status(200).json({
+        firebaseToken,
+    });
+});
+
+async function getKakaoToken(code: string) {
+    const kakao_client_id = process.env.KAKAO_RESTAPI_KEY;
+    const kakao_redirect_uri = process.env.KAKAO_REDIRECT_URI;
+    const kakao_client_secret = process.env.KAKAO_CLIENT_SECRET;
+    const kakao_token_url = `https://kauth.kakao.com/oauth/token?grant_type=authorization_code&client_id=${kakao_client_id}&redirect_uri=${kakao_redirect_uri}&code=${code}&client_secret=${kakao_client_secret}`;
+
+    try {
+        const res = await axios.post(kakao_token_url);
+
+        return res.data;
+    } catch (error: any) {
+        throw Error(error);
+    }
+}
+
+async function getKakaoUser(token: string) {
+    const headers = {
+        Authorization: `Bearer ${token}`,
+    };
+    const res = await axios.get("https://kapi.kakao.com/v2/user/me", {
+        headers,
+    });
+
+    return res.data;
+}
+
+async function updateOrCreateUserKakao(user: IKakaoProfile) {
+    const app = getAdminApp();
+    const auth = admin.auth(app);
+
+    const properties = {
+        uid: `kakao:${user.id}`,
+        provider: "KAKAO",
+        displayName: user.kakao_account.profile.nickname ?? "",
+        email: user.kakao_account.email,
+        emailVerified: true,
+    };
+
+    try {
+        return await auth.updateUser(properties.uid, properties);
+    } catch (error: any) {
+        if (error.code === "auth/user-not-found") {
+            return await auth.createUser(properties);
+        }
+        throw Error(error);
+    }
+}
+
+app.post("/kakao", async (req, res) => {
+    const { code } = req.body;
+
+    if (!code) {
+        return res.status(400).json({
+            code: 400,
+            message: "Code is a required parameter",
+        });
+    }
+
+    const response = await getKakaoToken(code);
+    const token = response.access_token;
+
+    const user = await getKakaoUser(token);
+
+    const authUser = await updateOrCreateUserKakao(user);
+    const firebaseToken = await admin
+        .auth()
+        .createCustomToken(authUser.uid, { provider: "KAKAO" });
 
     return res.status(200).json({
         firebaseToken,
