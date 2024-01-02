@@ -7,6 +7,7 @@ import {
     signInWithEmailAndPassword,
 } from "firebase/auth";
 import axios from "axios";
+import { NavigateFunction } from "react-router-dom";
 
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY as string,
@@ -54,7 +55,10 @@ export function handleNaverLoginRedirect() {
     window.location.href = naver_auth_url;
 }
 
-export async function handleNaverLogin(code: string) {
+export async function handleNaverLogin(
+    code: string,
+    navigate: NavigateFunction
+) {
     try {
         const res = await axios.post("/api/auth/naver", {
             code,
@@ -64,6 +68,8 @@ export async function handleNaverLogin(code: string) {
         const result = await signInWithCustomToken(auth, firebaseToken);
 
         alert(`${result.user.displayName}님 안녕하세요.`);
+
+        navigate("/post");
     } catch (error: any) {
         alert(error.message);
     }
@@ -77,7 +83,10 @@ export function handleKakaoLoginRedirect() {
     window.location.href = kakao_auth_url;
 }
 
-export async function handleKakaoLogin(code: string) {
+export async function handleKakaoLogin(
+    code: string,
+    navigate: NavigateFunction
+) {
     try {
         const res = await axios.post("/api/auth/kakao", {
             code,
@@ -86,6 +95,8 @@ export async function handleKakaoLogin(code: string) {
         const result = await signInWithCustomToken(auth, firebaseToken);
 
         alert(`${result.user.displayName}님 안녕하세요.`);
+
+        navigate("/post");
     } catch (error: any) {
         alert(error.message);
     }
