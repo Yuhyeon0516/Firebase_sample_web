@@ -683,6 +683,48 @@
     });
     ```
 
+### Social Login 중복 가입 방지
+
+-   각종 Test 진행 중 Kakao로 회원가입 후 Naver로 로그인하려고하니 `auth/email-already-exists` error가 발생함
+
+-   `updateOrCreateUser`함수에서 `uid`값으로 회원의 유무를 판단하게 되는데 같은 email을 사용하더라도 Kakao와Naver의 uid가 달라 update할 user가 없어 create하려했으나 가입된 email이 있다는 error를 발생시키게됨
+
+    -   예시로 Kakao로 회원가입하여 email이 `test@test.com` 계정의 uid는 `kakao:12345678`로 가입이 됨
+    -   그러나 Naver로 같은 email을 가진 회원이 `test@test.com`으로 가입하려고하면 uid가 `naver:12345678`을 가지게되며 가입이력이 없는 회원이라고 `auth/user-not-found` error가 발생하게되며 회원가입을 시키려고하다 email의 중복으로 error를 발생시키게된다.
+
+-   그래서 `auth/user-not-found` => `auth/email-already-exists` error가 순서대로 발생하게되면 이미 다른 social로 회원가입을 한 이력이 있다고 판단, email만 가지고 user정보를 가져와 return 시키는 과정으로 변경시킴
+
+    ```javascript
+    async function updateOrCreateUserKakao(user: IKakaoProfile) {
+        const app = getAdminApp();
+        const auth = admin.auth(app);
+
+        const properties = {
+            uid: `kakao:${user.id}`,
+            provider: "KAKAO",
+            displayName: user.kakao_account.profile.nickname ?? "",
+            email: user.kakao_account.email,
+            emailVerified: true,
+        };
+
+        try {
+            return await auth.updateUser(properties.uid, properties);
+        } catch (error: any) {
+            if (error.code === "auth/user-not-found") {
+                try {
+                    return await auth.createUser(properties);
+                } catch (error: any) {
+                    if (error.code === "auth/email-already-exists") {
+                        return await auth.getUserByEmail(properties.email);
+                    }
+                    throw Error(error);
+                }
+            }
+            throw Error(error);
+        }
+    }
+    ```
+
 ---
 
 # Firebase Storage(게시판)

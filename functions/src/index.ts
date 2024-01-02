@@ -80,7 +80,14 @@ async function updateOrCreateUserNaver(user: INaverProfile) {
         return await auth.updateUser(properties.uid, properties);
     } catch (error: any) {
         if (error.code === "auth/user-not-found") {
-            return await auth.createUser(properties);
+            try {
+                return await auth.createUser(properties);
+            } catch (error: any) {
+                if (error.code === "auth/email-already-exists") {
+                    return await auth.getUserByEmail(properties.email);
+                }
+                throw Error(error);
+            }
         }
         throw Error(error);
     }
@@ -152,7 +159,14 @@ async function updateOrCreateUserKakao(user: IKakaoProfile) {
         return await auth.updateUser(properties.uid, properties);
     } catch (error: any) {
         if (error.code === "auth/user-not-found") {
-            return await auth.createUser(properties);
+            try {
+                return await auth.createUser(properties);
+            } catch (error: any) {
+                if (error.code === "auth/email-already-exists") {
+                    return await auth.getUserByEmail(properties.email);
+                }
+                throw Error(error);
+            }
         }
         throw Error(error);
     }
