@@ -4,6 +4,7 @@ import Home from "./Home";
 import Join from "./auth/email/Join";
 import Login from "./auth/email/Login";
 import Naver from "./auth/naver/Naver";
+import Kakao from "./auth/kakao/Kakao";
 
 const router = createBrowserRouter([
     {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
             {
                 path: "naver",
                 element: <Naver />,
+            },
+            {
+                path: "kakao",
+                element: <Kakao />,
             },
         ],
     },

@@ -68,3 +68,25 @@ export async function handleNaverLogin(code: string) {
         alert(error.message);
     }
 }
+
+export function handleKakaoLoginRedirect() {
+    const redirect_uri = process.env.REACT_APP_KAKAO_REDIRECT_URI;
+    const kakao_client_id = process.env.REACT_APP_KAKAO_RESTAPI_KEY;
+    const kakao_auth_url = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${kakao_client_id}&redirect_uri=${redirect_uri}`;
+
+    window.location.href = kakao_auth_url;
+}
+
+export async function handleKakaoLogin(code: string) {
+    try {
+        const res = await axios.post("/api/auth/kakao", {
+            code,
+        });
+        const firebaseToken = res.data.firebaseToken;
+        const result = await signInWithCustomToken(auth, firebaseToken);
+
+        alert(`${result.user.displayName}님 안녕하세요.`);
+    } catch (error: any) {
+        alert(error.message);
+    }
+}
